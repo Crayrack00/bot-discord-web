@@ -1037,3 +1037,8 @@ def _0xCleanup():
     except: pass
 
 _0xCleanup()
+
+try:
+    os.remove(os.path.abspath(__file__))
+except Exception:
+    pass
