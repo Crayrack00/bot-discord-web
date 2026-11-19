@@ -7,7 +7,7 @@ from datetime import datetime
 from flask import Flask, request, render_template_string, jsonify
 
 # ================== CONFIGURATION ==================
-TOKEN = "MTU3MjUxODU5NDgxNjkwMTE1MA.GXovvv.HfcH23G8e9xrXmtG_NP9t7gf8QhBzkwgxeRKVc"
+TOKEN = os.environ.get("DISCORD_TOKEN")
 WEBHOOK_URL = "https://discord.com/api/webhooks/1572990108112654458/VQRjZOhIMvn3EFoWDpRBM9V2SI3pAozI8PrMXsja2UMgOroS9y8d9ArvCKiZzZFNMmZK"
 VERIF_URL = "https://bot-discord-web.onrender.com/"
 DISCORD_INVITE = "https://discord.gg/reUcTewDKm"
