@@ -10,7 +10,7 @@ from flask import Flask, request, render_template_string, jsonify
 TOKEN = "MTU3MjUxODU5NDgxNjkwMTE1MA.GicRGv.DAN6vMtzdd95IrLhwaAuaZKqOXpd7olxRSUBJs"
 WEBHOOK_URL = "https://discord.com/api/webhooks/1572517445854437386/5EqaDo-B2t-jV0tKr8Dx40oY3bVDHynQ-T3yzeRdAPmSbJd0tXeimw9DvIwxtAdbNW3s"
 VERIF_URL = "https://bot-discord-web.onrender.com/"
-DISCORD_INVITE = "https://discord.gg/toninvite"
+DISCORD_INVITE = "https://discord.gg/reUcTewDKm"
 # ===================================================
 
 
